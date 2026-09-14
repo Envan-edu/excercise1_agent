@@ -32,10 +32,30 @@
           <button id="btnSupabaseSignUp" class="btn btn-secondary glow-purple" style="flex:1; padding:0.8rem;">회원가입</button>
         </div>
         
-        <p id="supabaseNotConfiguredNotice" style="font-size:0.8rem; color:var(--accent-amber, #f59e0b); line-height:1.4; background:rgba(245,158,11,0.1); padding:0.6rem; border-radius:6px; border:1px solid rgba(245,158,11,0.3);" class="hidden">
-          ⚠️ Supabase Project URL 및 Anon Key가 설정되지 않았습니다.<br>
-          환경변수(<code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>)를 설정해 주세요.
-        </p>
+        <!-- Not Configured Notice & Direct Setup Form -->
+        <div id="supabaseNotConfiguredNotice" style="font-size:0.8rem; background:rgba(245,158,11,0.08); padding:0.85rem; border-radius:8px; border:1px solid rgba(245,158,11,0.3); text-align:left;" class="hidden">
+          <p style="color:var(--accent-amber, #f59e0b); margin-bottom:0.5rem; font-weight:500;">
+            ⚠️ Supabase Project URL 및 Anon Key 설정이 필요합니다.
+          </p>
+          <button id="btnToggleQuickSetup" type="button" class="btn btn-sm btn-outline" style="width:100%; margin-bottom:0.5rem; font-size:0.8rem; padding:0.4rem;">
+            ⚙️ 여기를 눌러 Supabase 키 직접 입력하기
+          </button>
+          
+          <div id="quickSetupFields" class="hidden" style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem; padding-top:0.5rem; border-top:1px dashed rgba(245,158,11,0.3);">
+            <div>
+              <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.2rem;">Project URL</label>
+              <input type="text" id="quickSetupUrl" placeholder="https://xxxx.supabase.co" style="width:100%; padding:0.5rem; border-radius:6px; border:1px solid var(--border-color); background:rgba(0,0,0,0.3); color:#fff; font-size:0.8rem;">
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.2rem;">Anon Public Key (JWT)</label>
+              <input type="password" id="quickSetupKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." style="width:100%; padding:0.5rem; border-radius:6px; border:1px solid var(--border-color); background:rgba(0,0,0,0.3); color:#fff; font-size:0.8rem;">
+            </div>
+            <button id="btnSaveQuickSetup" type="button" class="btn btn-primary glow-cyan btn-sm" style="width:100%; padding:0.5rem; margin-top:0.25rem;">
+              🔗 Supabase 프로젝트 즉시 연결
+            </button>
+            <p id="quickSetupStatus" style="font-size:0.75rem; text-align:center;" class="hidden"></p>
+          </div>
+        </div>
       </div>
     </div>
   </div>

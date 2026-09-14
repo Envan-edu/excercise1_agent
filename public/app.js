@@ -108,6 +108,67 @@ async function initAuthSystem() {
   }
 }
 
+// --- Quick Supabase Setup in Login Modal ---
+const btnToggleQuickSetup = document.getElementById('btnToggleQuickSetup');
+const quickSetupFields = document.getElementById('quickSetupFields');
+const btnSaveQuickSetup = document.getElementById('btnSaveQuickSetup');
+const quickSetupUrl = document.getElementById('quickSetupUrl');
+const quickSetupKey = document.getElementById('quickSetupKey');
+const quickSetupStatus = document.getElementById('quickSetupStatus');
+
+if (btnToggleQuickSetup && quickSetupFields) {
+  btnToggleQuickSetup.addEventListener('click', () => {
+    quickSetupFields.classList.toggle('hidden');
+  });
+}
+
+if (btnSaveQuickSetup) {
+  btnSaveQuickSetup.addEventListener('click', async () => {
+    const url = (quickSetupUrl.value || '').trim();
+    const key = (quickSetupKey.value || '').trim();
+
+    if (!url || !key) {
+      quickSetupStatus.className = 'message-box error';
+      quickSetupStatus.textContent = 'URL과 Anon Key를 모두 입력해주세요.';
+      quickSetupStatus.classList.remove('hidden');
+      return;
+    }
+
+    btnSaveQuickSetup.disabled = true;
+    btnSaveQuickSetup.textContent = '연결 중...';
+
+    try {
+      const res = await fetch('/api/auth/setup-supabase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ supabaseUrl: url, supabaseAnonKey: key })
+      });
+      const data = await res.json();
+      if (data.success) {
+        quickSetupStatus.className = 'message-box success';
+        quickSetupStatus.textContent = '✅ Supabase 연동 완료! 이제 로그인/가입해 주세요.';
+        quickSetupStatus.classList.remove('hidden');
+        quickSetupFields.classList.add('hidden');
+        supabaseNotConfiguredNotice.classList.add('hidden');
+
+        // 인증 시스템 즉시 재초기화
+        await initAuthSystem();
+      } else {
+        quickSetupStatus.className = 'message-box error';
+        quickSetupStatus.textContent = `❌ ${data.error || '연동 실패'}`;
+        quickSetupStatus.classList.remove('hidden');
+      }
+    } catch (e) {
+      quickSetupStatus.className = 'message-box error';
+      quickSetupStatus.textContent = '❌ 통신 오류가 발생했습니다.';
+      quickSetupStatus.classList.remove('hidden');
+    } finally {
+      btnSaveQuickSetup.disabled = false;
+      btnSaveQuickSetup.textContent = '🔗 Supabase 프로젝트 즉시 연결';
+    }
+  });
+}
+
 // 사용자 프로필 배지 갱신
 function updateUserUI(email) {
   if (!userStatusBadge) return;

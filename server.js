@@ -103,7 +103,22 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 2-2. API 인증 검증
+    // 2-2. 공개 API: 최초 Supabase 키 등록 (로그인 전 화면에서 직접 등록 허용)
+    if (pathname === '/api/auth/setup-supabase' && method === 'POST') {
+      const body = await parseJsonBody(req);
+      const { supabaseUrl, supabaseAnonKey } = body;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        return sendJson(res, 400, { success: false, error: 'Project URL과 Anon Key를 모두 입력해주세요.' });
+      }
+      const ok = settingsManager.setSupabaseConfig(supabaseUrl, supabaseAnonKey, true);
+      return sendJson(res, 200, {
+        success: ok,
+        message: 'Supabase 연동이 완료되었습니다. 이제 회원가입 및 로그인을 진행해 주세요!',
+        settings: settingsManager.getSettings()
+      });
+    }
+
+    // 2-3. API 인증 검증
     const authResult = await authenticateRequest(req, queryParams);
     if (!authResult.authenticated) {
       return sendJson(res, 401, { error: 'Unauthorized', message: '대시보드 로그인 인증이 필요하거나 만료되었습니다.' });
