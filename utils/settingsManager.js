@@ -25,6 +25,9 @@ class SettingsManager {
         sseBufferingOff: true,
         corsEnabled: true
       },
+      supabaseUrl: process.env.SUPABASE_URL || '',
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+      supabaseEnabled: process.env.SUPABASE_ENABLED === 'true',
       executionHistory: []
     };
 
@@ -69,8 +72,19 @@ class SettingsManager {
       compressionLevel: this.settings.compressionLevel,
       pricing: this.settings.pricing,
       proxyConfig: this.settings.proxyConfig,
+      supabaseUrl: this.settings.supabaseUrl || '',
+      supabaseAnonKey: this.settings.supabaseAnonKey || '',
+      supabaseEnabled: !!this.settings.supabaseEnabled,
       historyCount: this.settings.executionHistory.length
     };
+  }
+
+  setSupabaseConfig(url, anonKey, enabled) {
+    if (typeof url === 'string') this.settings.supabaseUrl = url.trim();
+    if (typeof anonKey === 'string') this.settings.supabaseAnonKey = anonKey.trim();
+    if (typeof enabled === 'boolean') this.settings.supabaseEnabled = enabled;
+    this.saveSettings();
+    return true;
   }
 
   verifyCredentials(username, password) {

@@ -9,20 +9,45 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <!-- Supabase JS SDK CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <!-- Login Credentials Modal -->
+  <!-- Login Credentials Modal (Supabase & Local Auth) -->
   <div id="loginModal" class="modal-backdrop">
-    <div class="modal-box glass edit-modal" style="max-width: 420px; text-align: center;">
-      <div class="modal-header">
-        <h3>🔒 대시보드 보안 로그인</h3>
+    <div class="modal-box glass edit-modal" style="max-width: 440px; text-align: center;">
+      <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.75rem; margin-bottom:1rem;">
+        <h3 id="loginModalTitle">🔐 대시보드 보안 로그인</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">Supabase 클라우드 인증 또는 로컬 관리자 계정으로 접속합니다.</p>
       </div>
-      <div class="modal-body" style="display:flex; flex-direction:column; gap:1rem;">
-        <p style="font-size:0.85rem; color:var(--text-muted);">NAS 및 개인 도메인 접근을 보호하기 위해 계정과 비밀번호를 입력해주세요.</p>
+
+      <!-- Auth Mode Tabs (Supabase vs Local) -->
+      <div id="authModeTabs" style="display:flex; gap:0.5rem; margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.5rem;">
+        <button id="btnModeSupabase" class="btn btn-sm btn-primary" style="flex:1;">⚡ Supabase 로그인</button>
+        <button id="btnModeLocal" class="btn btn-sm btn-secondary" style="flex:1;">🔑 로컬 관리자</button>
+      </div>
+
+      <!-- Supabase Auth Form -->
+      <div id="formSupabaseAuth" class="modal-body" style="display:flex; flex-direction:column; gap:0.75rem;">
+        <input type="email" id="supabaseEmail" placeholder="이메일 주소 (예: user@example.com)" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
+        <input type="password" id="supabasePassword" placeholder="비밀번호" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
+        <p id="supabaseAuthError" style="color:var(--accent-rose); font-size:0.8rem;" class="hidden"></p>
+        
+        <div style="display:flex; gap:0.5rem;">
+          <button id="btnSupabaseLogin" class="btn btn-primary glow-cyan" style="flex:1;">로그인</button>
+          <button id="btnSupabaseSignUp" class="btn btn-secondary glow-purple" style="flex:1;">회원가입</button>
+        </div>
+        <p id="supabaseNotConfiguredNotice" style="font-size:0.75rem; color:var(--text-muted); line-height:1.4;" class="hidden">
+          ⚠️ Supabase 프로젝트 URL/Key가 아직 설정되지 않았습니다. 상단의 <strong>[🔑 로컬 관리자]</strong> 탭으로 먼저 로그인하신 후 관리자 설정에서 Supabase 키를 입력하실 수 있습니다.
+        </p>
+      </div>
+
+      <!-- Local Auth Form -->
+      <div id="formLocalAuth" class="modal-body hidden" style="display:flex; flex-direction:column; gap:0.75rem;">
         <input type="text" id="loginUsername" placeholder="계정 ID 입력 (기본: admin)" value="admin" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
         <input type="password" id="loginPassword" placeholder="비밀번호 입력 (기본: 1234)" value="1234" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
         <p id="loginError" style="color:var(--accent-rose); font-size:0.8rem;" class="hidden">계정 또는 비밀번호가 올바르지 않습니다.</p>
-        <button id="btnLoginSubmit" class="btn btn-primary glow-cyan" style="width:100%;">로그인하기</button>
+        <button id="btnLoginSubmit" class="btn btn-primary glow-cyan" style="width:100%;">로컬 로그인하기</button>
       </div>
     </div>
   </div>
@@ -61,6 +86,14 @@
         <button id="btnReset" class="btn btn-outline-danger">
           <span>🔄 초기화</span>
         </button>
+
+        <!-- User Profile & Logout -->
+        <div id="userProfileArea" style="display:flex; align-items:center; gap:0.5rem; margin-left:0.5rem; padding-left:0.75rem; border-left:1px solid rgba(255,255,255,0.15);">
+          <span id="userStatusBadge" style="font-size:0.8rem; color:var(--accent-cyan); background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); padding:0.35rem 0.65rem; border-radius:20px; font-weight:500;">👤 게스트</span>
+          <button id="btnLogout" class="btn btn-sm btn-outline-danger" title="로그아웃" style="padding:0.35rem 0.65rem;">
+            <span>🚪 로그아웃</span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -260,6 +293,37 @@
             </div>
 
             <div class="admin-form-grid">
+              <!-- Supabase Auth Integration Card -->
+              <div class="admin-card glass full-width" style="border:1px solid rgba(6,182,212,0.3); background:rgba(6,182,212,0.03);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <h4>⚡ Supabase Auth 클라우드 인증 연동</h4>
+                    <p class="card-desc">Supabase 프로젝트를 연동하여 안전한 이메일/비밀번호 로그인 및 소셜 회원가입 시스템을 활성화합니다.</p>
+                  </div>
+                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:600; color:var(--accent-cyan);">
+                    <input type="checkbox" id="settingSupabaseEnabled" style="width:18px; height:18px; cursor:pointer;">
+                    <span>Supabase 인증 활성화</span>
+                  </label>
+                </div>
+
+                <div class="form-group margin-top">
+                  <label>Project URL (예: https://abcdefghijkl.supabase.co)</label>
+                  <input type="text" id="settingSupabaseUrl" class="form-control" placeholder="https://your-project.supabase.co">
+                </div>
+                <div class="form-group margin-top">
+                  <label>Project API Anon / Public Key (JWT 토큰)</label>
+                  <input type="password" id="settingSupabaseAnonKey" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                  <small style="color:var(--text-muted); font-size:0.75rem; display:block; margin-top:0.25rem;">
+                    * Supabase 대시보드 <strong>Project Settings -> API -> Project API Keys (anon public)</strong>에서 확인하실 수 있습니다.
+                  </small>
+                </div>
+
+                <div style="display:flex; gap:0.75rem; align-items:center; margin-top:1rem;">
+                  <button class="btn btn-primary glow-cyan" id="btnSaveSupabaseConfig">💾 Supabase 연동 설정 저장</button>
+                  <div id="supabaseSaveMsg" class="message-box hidden" style="margin:0;"></div>
+                </div>
+              </div>
+
               <!-- Credentials Change Card -->
               <div class="admin-card glass">
                 <h4>🔑 관리자 계정 ID & 비밀번호 변경</h4>

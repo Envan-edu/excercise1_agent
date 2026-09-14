@@ -6,6 +6,7 @@ const url = require('url');
 const taskEngine = require('./taskEngine');
 const tokenOptimizer = require('./utils/tokenOptimizer');
 const settingsManager = require('./utils/settingsManager');
+const { authenticateRequest } = require('./middleware/auth');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -42,7 +43,7 @@ function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, x-dashboard-user, x-dashboard-key',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-dashboard-user, x-dashboard-key',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'
   });
   res.end(JSON.stringify(data));
@@ -59,7 +60,7 @@ const server = http.createServer(async (req, res) => {
   if (method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, x-dashboard-user, x-dashboard-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-dashboard-user, x-dashboard-key',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'
     });
     return res.end();
@@ -67,11 +68,9 @@ const server = http.createServer(async (req, res) => {
 
   // 1. SSE 실시간 스트리밍 엔드포인트
   if (pathname === '/api/events' && method === 'GET') {
-    const reqUser = queryParams.user || 'admin';
-    const reqKey = queryParams.key;
-
-    if (!settingsManager.verifyCredentials(reqUser, reqKey)) {
-      return sendJson(res, 401, { error: 'Unauthorized', message: '대시보드 로그인 계정(ID) 또는 비밀번호가 올바르지 않습니다.' });
+    const authResult = await authenticateRequest(req, queryParams);
+    if (!authResult.authenticated) {
+      return sendJson(res, 401, { error: 'Unauthorized', message: '대시보드 로그인 인증이 필요하거나 토큰이 올바르지 않습니다.' });
     }
 
     res.writeHead(200, {
@@ -92,12 +91,22 @@ const server = http.createServer(async (req, res) => {
 
   // 2. REST API 엔드포인트 처리
   if (pathname.startsWith('/api/')) {
-    // API 인증 검증
-    const reqUser = req.headers['x-dashboard-user'] || queryParams.user || 'admin';
-    const reqKey = req.headers['x-dashboard-key'] || queryParams.key;
+    // 2-1. 공개 API: Supabase 연결 설정 제공 (인증 없이 접근 가능)
+    if (pathname === '/api/auth/config' && method === 'GET') {
+      const settings = settingsManager.getSettings();
+      return sendJson(res, 200, {
+        success: true,
+        authEnabled: settings.authEnabled,
+        supabaseEnabled: settings.supabaseEnabled,
+        supabaseUrl: settings.supabaseUrl || '',
+        supabaseAnonKey: settings.supabaseAnonKey || ''
+      });
+    }
 
-    if (!settingsManager.verifyCredentials(reqUser, reqKey)) {
-      return sendJson(res, 401, { error: 'Unauthorized', message: '대시보드 로그인 계정(ID) 또는 비밀번호가 올바르지 않습니다.' });
+    // 2-2. API 인증 검증
+    const authResult = await authenticateRequest(req, queryParams);
+    if (!authResult.authenticated) {
+      return sendJson(res, 401, { error: 'Unauthorized', message: '대시보드 로그인 인증이 필요하거나 만료되었습니다.' });
     }
 
     // GET /api/tasks
@@ -190,6 +199,18 @@ const server = http.createServer(async (req, res) => {
       }
       const ok = settingsManager.setCredentials(newUsername.trim(), newPassword.trim());
       return sendJson(res, 200, { success: ok, message: ok ? '계정 정보가 성공적으로 변경되었습니다.' : '계정 정보 변경 실패' });
+    }
+
+    // POST /api/admin/supabase-config
+    if (pathname === '/api/admin/supabase-config' && method === 'POST') {
+      const body = await parseJsonBody(req);
+      const { supabaseUrl, supabaseAnonKey, supabaseEnabled } = body;
+      const ok = settingsManager.setSupabaseConfig(supabaseUrl, supabaseAnonKey, !!supabaseEnabled);
+      return sendJson(res, 200, {
+        success: ok,
+        message: 'Supabase 연동 설정이 성공적으로 저장되었습니다.',
+        settings: settingsManager.getSettings()
+      });
     }
 
     // GET /api/admin/history
