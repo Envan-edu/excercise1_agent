@@ -6,8 +6,6 @@ class SettingsManager {
   constructor() {
     this.settingsPath = path.join(__dirname, '..', 'config', 'settings.json');
     this.defaultSettings = {
-      authUsername: process.env.DASHBOARD_USER || 'admin',
-      authPassword: process.env.DASHBOARD_PASS || '1234',
       authEnabled: process.env.AUTH_ENABLED !== 'false',
       compressionLevel: 'standard', // conservative, standard, aggressive
       pricing: {
@@ -27,7 +25,7 @@ class SettingsManager {
       },
       supabaseUrl: process.env.SUPABASE_URL || '',
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
-      supabaseEnabled: process.env.SUPABASE_ENABLED === 'true',
+      supabaseEnabled: process.env.SUPABASE_ENABLED !== 'false',
       executionHistory: []
     };
 
@@ -68,7 +66,6 @@ class SettingsManager {
   getSettings() {
     return {
       authEnabled: this.settings.authEnabled,
-      authUsername: this.settings.authUsername || 'admin',
       compressionLevel: this.settings.compressionLevel,
       pricing: this.settings.pricing,
       proxyConfig: this.settings.proxyConfig,
@@ -83,48 +80,6 @@ class SettingsManager {
     if (typeof url === 'string') this.settings.supabaseUrl = url.trim();
     if (typeof anonKey === 'string') this.settings.supabaseAnonKey = anonKey.trim();
     if (typeof enabled === 'boolean') this.settings.supabaseEnabled = enabled;
-    this.saveSettings();
-    return true;
-  }
-
-  verifyCredentials(username, password) {
-    if (!this.settings.authEnabled) return true;
-    const reqUser = (username || 'admin').trim();
-    const targetUser = (this.settings.authUsername || 'admin').trim();
-    const reqPass = (password || '').trim();
-    const targetPass = (this.settings.authPassword || '1234').trim();
-
-    if (reqUser === targetUser) {
-      if (reqPass === targetPass) return true;
-      // 초기 호환성: 1234와 admin1234 모두 허용
-      if ((targetPass === '1234' || targetPass === 'admin1234') && (reqPass === '1234' || reqPass === 'admin1234')) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  verifyPassword(password) {
-    if (!this.settings.authEnabled) return true;
-    const reqPass = (password || '').trim();
-    const targetPass = (this.settings.authPassword || '1234').trim();
-    return (reqPass === targetPass) || ((targetPass === '1234' || targetPass === 'admin1234') && (reqPass === '1234' || reqPass === 'admin1234'));
-  }
-
-  setCredentials(newUsername, newPassword) {
-    if (newUsername && typeof newUsername === 'string') {
-      this.settings.authUsername = newUsername.trim();
-    }
-    if (newPassword && typeof newPassword === 'string') {
-      this.settings.authPassword = newPassword.trim();
-    }
-    this.saveSettings();
-    return true;
-  }
-
-  setPassword(newPassword) {
-    if (!newPassword || typeof newPassword !== 'string') return false;
-    this.settings.authPassword = newPassword;
     this.saveSettings();
     return true;
   }

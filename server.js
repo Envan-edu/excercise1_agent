@@ -43,7 +43,7 @@ function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-dashboard-user, x-dashboard-key',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'
   });
   res.end(JSON.stringify(data));
@@ -60,7 +60,7 @@ const server = http.createServer(async (req, res) => {
   if (method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-dashboard-user, x-dashboard-key',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'
     });
     return res.end();
@@ -185,20 +185,6 @@ const server = http.createServer(async (req, res) => {
       const body = await parseJsonBody(req);
       const updated = settingsManager.updateSettings(body);
       return sendJson(res, 200, { success: true, settings: updated });
-    }
-
-    // POST /api/admin/change-credentials
-    if (pathname === '/api/admin/change-credentials' && method === 'POST') {
-      const body = await parseJsonBody(req);
-      const { newUsername, newPassword } = body;
-      if (!newUsername || newUsername.trim().length < 2) {
-        return sendJson(res, 400, { success: false, error: '계정 ID는 최소 2자 이상이어야 합니다.' });
-      }
-      if (!newPassword || newPassword.trim().length < 4) {
-        return sendJson(res, 400, { success: false, error: '비밀번호는 최소 4자 이상이어야 합니다.' });
-      }
-      const ok = settingsManager.setCredentials(newUsername.trim(), newPassword.trim());
-      return sendJson(res, 200, { success: ok, message: ok ? '계정 정보가 성공적으로 변경되었습니다.' : '계정 정보 변경 실패' });
     }
 
     // POST /api/admin/supabase-config

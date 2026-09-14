@@ -13,41 +13,29 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <!-- Login Credentials Modal (Supabase & Local Auth) -->
+  <!-- Login Credentials Modal (Pure Supabase Auth) -->
   <div id="loginModal" class="modal-backdrop">
-    <div class="modal-box glass edit-modal" style="max-width: 440px; text-align: center;">
-      <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.75rem; margin-bottom:1rem;">
-        <h3 id="loginModalTitle">🔐 대시보드 보안 로그인</h3>
-        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">Supabase 클라우드 인증 또는 로컬 관리자 계정으로 접속합니다.</p>
-      </div>
-
-      <!-- Auth Mode Tabs (Supabase vs Local) -->
-      <div id="authModeTabs" style="display:flex; gap:0.5rem; margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.5rem;">
-        <button id="btnModeSupabase" class="btn btn-sm btn-primary" style="flex:1;">⚡ Supabase 로그인</button>
-        <button id="btnModeLocal" class="btn btn-sm btn-secondary" style="flex:1;">🔑 로컬 관리자</button>
+    <div class="modal-box glass edit-modal" style="max-width: 420px; text-align: center;">
+      <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.75rem; margin-bottom:1.25rem;">
+        <h3 id="loginModalTitle">⚡ Supabase 클라우드 로그인</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.35rem;">에이전트 관제 대시보드 접근을 위해 Supabase 계정으로 인증해주세요.</p>
       </div>
 
       <!-- Supabase Auth Form -->
-      <div id="formSupabaseAuth" class="modal-body" style="display:flex; flex-direction:column; gap:0.75rem;">
-        <input type="email" id="supabaseEmail" placeholder="이메일 주소 (예: user@example.com)" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
-        <input type="password" id="supabasePassword" placeholder="비밀번호" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
+      <div id="formSupabaseAuth" class="modal-body" style="display:flex; flex-direction:column; gap:0.85rem;">
+        <input type="email" id="supabaseEmail" placeholder="이메일 주소 (user@example.com)" style="padding:0.8rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff; font-size:0.95rem;">
+        <input type="password" id="supabasePassword" placeholder="비밀번호 입력" style="padding:0.8rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff; font-size:0.95rem;">
         <p id="supabaseAuthError" style="color:var(--accent-rose); font-size:0.8rem;" class="hidden"></p>
         
-        <div style="display:flex; gap:0.5rem;">
-          <button id="btnSupabaseLogin" class="btn btn-primary glow-cyan" style="flex:1;">로그인</button>
-          <button id="btnSupabaseSignUp" class="btn btn-secondary glow-purple" style="flex:1;">회원가입</button>
+        <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
+          <button id="btnSupabaseLogin" class="btn btn-primary glow-cyan" style="flex:1; padding:0.8rem;">로그인</button>
+          <button id="btnSupabaseSignUp" class="btn btn-secondary glow-purple" style="flex:1; padding:0.8rem;">회원가입</button>
         </div>
-        <p id="supabaseNotConfiguredNotice" style="font-size:0.75rem; color:var(--text-muted); line-height:1.4;" class="hidden">
-          ⚠️ Supabase 프로젝트 URL/Key가 아직 설정되지 않았습니다. 상단의 <strong>[🔑 로컬 관리자]</strong> 탭으로 먼저 로그인하신 후 관리자 설정에서 Supabase 키를 입력하실 수 있습니다.
+        
+        <p id="supabaseNotConfiguredNotice" style="font-size:0.8rem; color:var(--accent-amber, #f59e0b); line-height:1.4; background:rgba(245,158,11,0.1); padding:0.6rem; border-radius:6px; border:1px solid rgba(245,158,11,0.3);" class="hidden">
+          ⚠️ Supabase Project URL 및 Anon Key가 설정되지 않았습니다.<br>
+          환경변수(<code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>)를 설정해 주세요.
         </p>
-      </div>
-
-      <!-- Local Auth Form -->
-      <div id="formLocalAuth" class="modal-body hidden" style="display:flex; flex-direction:column; gap:0.75rem;">
-        <input type="text" id="loginUsername" placeholder="계정 ID 입력 (기본: admin)" value="admin" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
-        <input type="password" id="loginPassword" placeholder="비밀번호 입력 (기본: 1234)" value="1234" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
-        <p id="loginError" style="color:var(--accent-rose); font-size:0.8rem;" class="hidden">계정 또는 비밀번호가 올바르지 않습니다.</p>
-        <button id="btnLoginSubmit" class="btn btn-primary glow-cyan" style="width:100%;">로컬 로그인하기</button>
       </div>
     </div>
   </div>
@@ -322,25 +310,6 @@
                   <button class="btn btn-primary glow-cyan" id="btnSaveSupabaseConfig">💾 Supabase 연동 설정 저장</button>
                   <div id="supabaseSaveMsg" class="message-box hidden" style="margin:0;"></div>
                 </div>
-              </div>
-
-              <!-- Credentials Change Card -->
-              <div class="admin-card glass">
-                <h4>🔑 관리자 계정 ID & 비밀번호 변경</h4>
-                <div class="form-group margin-top">
-                  <label>관리자 계정 ID (Username)</label>
-                  <input type="text" id="inputNewUsername" class="form-control" placeholder="계정 ID 입력 (기본: admin)">
-                </div>
-                <div class="form-group margin-top">
-                  <label>새 비밀번호 입력</label>
-                  <input type="password" id="inputNewPassword" class="form-control" placeholder="최소 4자 이상 입력">
-                </div>
-                <div class="form-group margin-top">
-                  <label>새 비밀번호 확인</label>
-                  <input type="password" id="inputNewPasswordConfirm" class="form-control" placeholder="비밀번호 다시 입력">
-                </div>
-                <button class="btn btn-accent margin-top" id="btnChangePassword">🔑 계정 정보 변경하기</button>
-                <div id="pwdChangeMsg" class="message-box hidden margin-top"></div>
               </div>
 
               <!-- Proxy Ping & Status Card -->

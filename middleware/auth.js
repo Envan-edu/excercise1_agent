@@ -104,25 +104,19 @@ async function authenticateRequest(req, queryParams = {}) {
     bearerToken = queryParams.token.trim();
   }
 
-  // 3. Supabase Auth가 활성화되어 있고 토큰이 제공된 경우
-  if (settings.supabaseEnabled && settings.supabaseUrl && settings.supabaseAnonKey) {
+  // 3. Supabase Auth 토큰 검증 (단일화된 유일한 인증 수단)
+  if (settings.supabaseUrl && settings.supabaseAnonKey) {
     if (bearerToken) {
       const user = await verifySupabaseToken(bearerToken, settings.supabaseUrl, settings.supabaseAnonKey);
       if (user) {
         return { authenticated: true, user };
       }
     }
+    return { authenticated: false, user: null, reason: 'Invalid or expired Supabase token' };
   }
 
-  // 4. 기존 로컬 계정 인증 호환 (헤더 또는 쿼리 파라미터)
-  const clientUser = req.headers['x-dashboard-user'] || queryParams.user || 'admin';
-  const clientKey = req.headers['x-dashboard-key'] || queryParams.key;
-
-  if (settingsManager.verifyCredentials(clientUser, clientKey)) {
-    return { authenticated: true, user: clientUser };
-  }
-
-  return { authenticated: false, user: null };
+  // Supabase 연동 정보가 설정되지 않은 경우 미인증 처리
+  return { authenticated: false, user: null, reason: 'Supabase configuration missing' };
 }
 
 module.exports = {

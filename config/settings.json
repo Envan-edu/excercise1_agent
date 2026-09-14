@@ -1,7 +1,8 @@
 {
-  "authUsername": "admin",
-  "authPassword": "1234",
   "authEnabled": true,
+  "supabaseEnabled": true,
+  "supabaseUrl": "",
+  "supabaseAnonKey": "",
   "compressionLevel": "standard",
   "pricing": {
     "gemini-1.5-flash": {

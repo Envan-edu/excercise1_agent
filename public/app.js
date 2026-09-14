@@ -3,9 +3,6 @@ let logsState = {};
 let tokenStatsState = {};
 let currentModalTaskId = null;
 let eventSource = null;
-let dashboardUsername = localStorage.getItem('DASHBOARD_USER') || 'admin';
-let dashboardPassword = localStorage.getItem('DASHBOARD_PASS') || '1234';
-
 // Supabase State & Config
 let supabaseClient = null;
 let supabaseSession = null;
@@ -18,22 +15,13 @@ let serverAuthConfig = {
 
 // DOM Elements - Auth & Profile
 const loginModal = document.getElementById('loginModal');
-const btnModeSupabase = document.getElementById('btnModeSupabase');
-const btnModeLocal = document.getElementById('btnModeLocal');
 const formSupabaseAuth = document.getElementById('formSupabaseAuth');
-const formLocalAuth = document.getElementById('formLocalAuth');
-
 const supabaseEmail = document.getElementById('supabaseEmail');
 const supabasePassword = document.getElementById('supabasePassword');
 const supabaseAuthError = document.getElementById('supabaseAuthError');
 const btnSupabaseLogin = document.getElementById('btnSupabaseLogin');
 const btnSupabaseSignUp = document.getElementById('btnSupabaseSignUp');
 const supabaseNotConfiguredNotice = document.getElementById('supabaseNotConfiguredNotice');
-
-const loginUsername = document.getElementById('loginUsername');
-const loginPassword = document.getElementById('loginPassword');
-const loginError = document.getElementById('loginError');
-const btnLoginSubmit = document.getElementById('btnLoginSubmit');
 
 const userStatusBadge = document.getElementById('userStatusBadge');
 const btnLogout = document.getElementById('btnLogout');
@@ -65,24 +53,6 @@ const agentModal = document.getElementById('agentModal');
 const agentForm = document.getElementById('agentForm');
 const agentModalTitle = document.getElementById('agentModalTitle');
 
-// --- Auth Mode Switching (Supabase vs Local) ---
-function switchAuthMode(mode) {
-  if (mode === 'supabase') {
-    btnModeSupabase.className = 'btn btn-sm btn-primary';
-    btnModeLocal.className = 'btn btn-sm btn-secondary';
-    formSupabaseAuth.classList.remove('hidden');
-    formLocalAuth.classList.add('hidden');
-  } else {
-    btnModeLocal.className = 'btn btn-sm btn-primary';
-    btnModeSupabase.className = 'btn btn-sm btn-secondary';
-    formLocalAuth.classList.remove('hidden');
-    formSupabaseAuth.classList.add('hidden');
-  }
-}
-
-btnModeSupabase.addEventListener('click', () => switchAuthMode('supabase'));
-btnModeLocal.addEventListener('click', () => switchAuthMode('local'));
-
 // --- Supabase Client Initialization ---
 async function initAuthSystem() {
   try {
@@ -95,7 +65,7 @@ async function initAuthSystem() {
     console.warn('Failed to fetch auth config:', err);
   }
 
-  // Supabase가 설정되어 있고 SDK가 로드된 경우
+  // Supabase 클라이언트 초기화
   if (serverAuthConfig.supabaseUrl && serverAuthConfig.supabaseAnonKey && window.supabase) {
     try {
       supabaseClient = window.supabase.createClient(serverAuthConfig.supabaseUrl, serverAuthConfig.supabaseAnonKey);
@@ -105,7 +75,7 @@ async function initAuthSystem() {
       const { data: sessionData } = await supabaseClient.auth.getSession();
       if (sessionData && sessionData.session) {
         supabaseSession = sessionData.session;
-        updateUserUI(supabaseSession.user.email, 'supabase');
+        updateUserUI(supabaseSession.user.email);
         loginModal.classList.add('hidden');
         initSse();
         return;
@@ -115,12 +85,13 @@ async function initAuthSystem() {
       supabaseClient.auth.onAuthStateChange((event, session) => {
         if (session) {
           supabaseSession = session;
-          updateUserUI(session.user.email, 'supabase');
+          updateUserUI(session.user.email);
           loginModal.classList.add('hidden');
           initSse();
         } else {
           supabaseSession = null;
-          updateUserUI(null, 'guest');
+          updateUserUI(null);
+          loginModal.classList.remove('hidden');
         }
       });
     } catch (e) {
@@ -128,38 +99,26 @@ async function initAuthSystem() {
       supabaseNotConfiguredNotice.classList.remove('hidden');
     }
   } else {
-    // Supabase 설정이 아직 안 된 경우 안내 표시
-    if (serverAuthConfig.supabaseEnabled) {
-      supabaseNotConfiguredNotice.classList.remove('hidden');
-    } else {
-      switchAuthMode('local');
-    }
+    supabaseNotConfiguredNotice.classList.remove('hidden');
   }
 
-  // 기본적으로 로컬 또는 저장된 정보로 SSE 시도
-  if (dashboardUsername && dashboardPassword && !serverAuthConfig.supabaseEnabled) {
-    updateUserUI(dashboardUsername, 'local');
-    initSse();
-  } else {
+  // 세션이 없으면 로그인 모달 표시
+  if (!supabaseSession) {
     loginModal.classList.remove('hidden');
   }
 }
 
 // 사용자 프로필 배지 갱신
-function updateUserUI(identifier, type) {
+function updateUserUI(email) {
   if (!userStatusBadge) return;
-  if (!identifier || type === 'guest') {
-    userStatusBadge.textContent = '👤 게스트';
+  if (!email) {
+    userStatusBadge.textContent = '👤 로그인 필요';
     userStatusBadge.style.borderColor = 'rgba(255,255,255,0.2)';
     userStatusBadge.style.color = 'var(--text-muted)';
-  } else if (type === 'supabase') {
-    userStatusBadge.textContent = `⚡ ${identifier}`;
+  } else {
+    userStatusBadge.textContent = `⚡ ${email}`;
     userStatusBadge.style.borderColor = 'rgba(6,182,212,0.5)';
     userStatusBadge.style.color = 'var(--accent-cyan)';
-  } else {
-    userStatusBadge.textContent = `🔑 ${identifier}`;
-    userStatusBadge.style.borderColor = 'rgba(168,85,247,0.5)';
-    userStatusBadge.style.color = 'var(--accent-purple)';
   }
 }
 
@@ -171,7 +130,7 @@ supabasePassword.addEventListener('keyup', (e) => { if (e.key === 'Enter') doSup
 async function doSupabaseLogin() {
   supabaseAuthError.classList.add('hidden');
   if (!supabaseClient) {
-    supabaseAuthError.textContent = 'Supabase 클라이언트가 초기화되지 않았습니다. 관리자 설정에서 URL/Key를 확인해주세요.';
+    supabaseAuthError.textContent = 'Supabase Project URL 및 Anon Key 설정이 필요합니다.';
     supabaseAuthError.classList.remove('hidden');
     return;
   }
@@ -195,7 +154,7 @@ async function doSupabaseLogin() {
       supabaseAuthError.classList.remove('hidden');
     } else if (data.session) {
       supabaseSession = data.session;
-      updateUserUI(data.session.user.email, 'supabase');
+      updateUserUI(data.session.user.email);
       loginModal.classList.add('hidden');
       initSse();
     }
@@ -212,7 +171,7 @@ async function doSupabaseLogin() {
 btnSupabaseSignUp.addEventListener('click', async () => {
   supabaseAuthError.classList.add('hidden');
   if (!supabaseClient) {
-    supabaseAuthError.textContent = 'Supabase가 아직 연동되지 않았습니다.';
+    supabaseAuthError.textContent = 'Supabase Project URL 및 Anon Key 설정이 필요합니다.';
     supabaseAuthError.classList.remove('hidden');
     return;
   }
@@ -242,11 +201,11 @@ btnSupabaseSignUp.addEventListener('click', async () => {
     } else {
       if (data.session) {
         supabaseSession = data.session;
-        updateUserUI(data.session.user.email, 'supabase');
+        updateUserUI(data.session.user.email);
         loginModal.classList.add('hidden');
         initSse();
       } else {
-        alert('🎉 가입 완료! Supabase 이메일 인증 설정에 따라 인증 메일을 확인해 주시거나 바로 로그인해 보세요.');
+        alert('🎉 가입 완료! 이메일 인증이 필요한 경우 메일함을 확인해 주시거나 바로 로그인해 보세요.');
       }
     }
   } catch (err) {
@@ -258,50 +217,30 @@ btnSupabaseSignUp.addEventListener('click', async () => {
   }
 });
 
-// --- Local Admin Login Action ---
-btnLoginSubmit.addEventListener('click', doLocalLogin);
-if (loginUsername) loginUsername.addEventListener('keyup', (e) => { if (e.key === 'Enter') doLocalLogin(); });
-loginPassword.addEventListener('keyup', (e) => { if (e.key === 'Enter') doLocalLogin(); });
-
-function doLocalLogin() {
-  const user = (loginUsername && loginUsername.value.trim()) ? loginUsername.value.trim() : 'admin';
-  const pass = (loginPassword && loginPassword.value.trim()) ? loginPassword.value.trim() : '1234';
-
-  dashboardUsername = user;
-  dashboardPassword = pass;
-  localStorage.setItem('DASHBOARD_USER', user);
-  localStorage.setItem('DASHBOARD_PASS', pass);
-  loginError.classList.add('hidden');
-  updateUserUI(user, 'local');
-  initSse();
-}
-
 // --- Logout Action ---
 btnLogout.addEventListener('click', async () => {
   if (confirm('대시보드에서 로그아웃하시겠습니까?')) {
     if (eventSource) eventSource.close();
 
-    if (supabaseClient && supabaseSession) {
+    if (supabaseClient) {
       await supabaseClient.auth.signOut();
     }
     supabaseSession = null;
-    localStorage.removeItem('DASHBOARD_PASS');
-    updateUserUI(null, 'guest');
+    updateUserUI(null);
     loginModal.classList.remove('hidden');
   }
 });
 
-// --- Initialize SSE Connection (Unified for Supabase & Local) ---
+// --- Initialize SSE Connection (Supabase Only) ---
 function initSse() {
   if (eventSource) eventSource.close();
 
-  let sseUrl = '/api/events';
-  if (supabaseSession && supabaseSession.access_token) {
-    sseUrl += `?token=${encodeURIComponent(supabaseSession.access_token)}`;
-  } else {
-    sseUrl += `?user=${encodeURIComponent(dashboardUsername)}&key=${encodeURIComponent(dashboardPassword)}`;
+  if (!supabaseSession || !supabaseSession.access_token) {
+    loginModal.classList.remove('hidden');
+    return;
   }
 
+  const sseUrl = `/api/events?token=${encodeURIComponent(supabaseSession.access_token)}`;
   eventSource = new EventSource(sseUrl);
 
   eventSource.addEventListener('init', (e) => {
@@ -338,25 +277,17 @@ function initSse() {
   eventSource.onerror = (err) => {
     console.warn('SSE Auth error or Disconnected.', err);
     loginModal.classList.remove('hidden');
-    if (supabaseSession) {
-      supabaseAuthError.classList.remove('hidden');
-      supabaseAuthError.textContent = '인증 토큰이 만료되었습니다. 다시 로그인해주세요.';
-    } else {
-      loginError.classList.remove('hidden');
-      loginError.textContent = '인증에 실패했습니다. 계정 ID 및 비밀번호를 확인해주세요.';
-    }
+    supabaseAuthError.classList.remove('hidden');
+    supabaseAuthError.textContent = '인증 토큰이 만료되었습니다. 다시 로그인해주세요.';
   };
 }
 
-// --- Helper fetch with Unified Auth Header ---
+// --- Helper fetch with Supabase Bearer Auth ---
 async function authFetch(url, options = {}) {
   const headers = { ...(options.headers || {}) };
 
   if (supabaseSession && supabaseSession.access_token) {
     headers['Authorization'] = `Bearer ${supabaseSession.access_token}`;
-  } else {
-    headers['x-dashboard-user'] = dashboardUsername;
-    headers['x-dashboard-key'] = dashboardPassword;
   }
 
   options.headers = headers;
@@ -364,13 +295,8 @@ async function authFetch(url, options = {}) {
 
   if (res.status === 401) {
     loginModal.classList.remove('hidden');
-    if (supabaseSession) {
-      supabaseAuthError.classList.remove('hidden');
-      supabaseAuthError.textContent = '세션이 만료되었습니다. 다시 로그인해주세요.';
-    } else {
-      loginError.classList.remove('hidden');
-      loginError.textContent = '인증이 만료되었거나 계정 정보가 틀립니다.';
-    }
+    supabaseAuthError.classList.remove('hidden');
+    supabaseAuthError.textContent = '인증 세션이 만료되었습니다. 다시 로그인해주세요.';
   }
   return res;
 }
@@ -647,50 +573,6 @@ document.getElementById('btnSaveTokenSettings').addEventListener('click', async 
   const data = await res.json();
   if (data.success) {
     alert('💡 토큰 절감 파라미터 및 LLM 단가 설정이 저장되었습니다.');
-  }
-});
-
-// Change Credentials (Username & Password)
-document.getElementById('btnChangePassword').addEventListener('click', async () => {
-  const u1 = document.getElementById('inputNewUsername').value.trim();
-  const p1 = document.getElementById('inputNewPassword').value.trim();
-  const p2 = document.getElementById('inputNewPasswordConfirm').value.trim();
-  const msgBox = document.getElementById('pwdChangeMsg');
-
-  if (!u1 || u1.length < 2) {
-    msgBox.className = 'message-box error margin-top';
-    msgBox.textContent = '계정 ID는 최소 2자 이상 입력해야 합니다.';
-    return;
-  }
-  if (!p1 || p1.length < 4) {
-    msgBox.className = 'message-box error margin-top';
-    msgBox.textContent = '비밀번호는 최소 4자 이상 입력해야 합니다.';
-    return;
-  }
-  if (p1 !== p2) {
-    msgBox.className = 'message-box error margin-top';
-    msgBox.textContent = '두 비밀번호가 일치하지 않습니다.';
-    return;
-  }
-
-  const res = await authFetch('/api/admin/change-credentials', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ newUsername: u1, newPassword: p1 })
-  });
-  const data = await res.json();
-  if (data.success) {
-    dashboardUsername = u1;
-    dashboardPassword = p1;
-    localStorage.setItem('DASHBOARD_USER', u1);
-    localStorage.setItem('DASHBOARD_PASS', p1);
-    msgBox.className = 'message-box success margin-top';
-    msgBox.textContent = '✅ 계정 ID 및 비밀번호가 성공적으로 변경되었습니다.';
-    document.getElementById('inputNewPassword').value = '';
-    document.getElementById('inputNewPasswordConfirm').value = '';
-  } else {
-    msgBox.className = 'message-box error margin-top';
-    msgBox.textContent = `❌ ${data.error || '변경 실패'}`;
   }
 });
 
