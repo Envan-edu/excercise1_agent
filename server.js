@@ -274,10 +274,15 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`🚀 Multi-Task Agent Executive Manager Server Started`);
-  console.log(`🌐 URL: http://localhost:${PORT}`);
-  console.log(`🌐 Alternative: http://127.0.0.1:${PORT}`);
-  console.log(`====================================================`);
-});
+if (!process.env.VERCEL) {
+  server.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`🚀 Multi-Task Agent Executive Manager Server Started`);
+    console.log(`🌐 URL: http://localhost:${PORT}`);
+    console.log(`🌐 Alternative: http://127.0.0.1:${PORT}`);
+    console.log(`====================================================`);
+  });
+}
+
+module.exports = server;
+
