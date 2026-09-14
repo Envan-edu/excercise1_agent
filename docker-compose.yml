@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  agent-manager:
+    build: .
+    container_name: agent-manager
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - AUTH_ENABLED=false # 개인 도메인 설정 시 true로 변경 가능
+      - DASHBOARD_PASS=admin1234 # 로그인 비밀번호
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data

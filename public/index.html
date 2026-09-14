@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Task Agent Executive Control & Admin Center</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Login Credentials Modal -->
+  <div id="loginModal" class="modal-backdrop">
+    <div class="modal-box glass edit-modal" style="max-width: 420px; text-align: center;">
+      <div class="modal-header">
+        <h3>🔒 대시보드 보안 로그인</h3>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:1rem;">
+        <p style="font-size:0.85rem; color:var(--text-muted);">NAS 및 개인 도메인 접근을 보호하기 위해 계정과 비밀번호를 입력해주세요.</p>
+        <input type="text" id="loginUsername" placeholder="계정 ID 입력 (기본: admin)" value="admin" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
+        <input type="password" id="loginPassword" placeholder="비밀번호 입력 (기본: 1234)" value="1234" style="padding:0.75rem; border-radius:8px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:#fff;">
+        <p id="loginError" style="color:var(--accent-rose); font-size:0.8rem;" class="hidden">계정 또는 비밀번호가 올바르지 않습니다.</p>
+        <button id="btnLoginSubmit" class="btn btn-primary glow-cyan" style="width:100%;">로그인하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Header & Navigation -->
+    <header class="main-header">
+      <div class="logo-area">
+        <div class="logo-icon">🤖</div>
+        <div>
+          <h1>AGENT EXECUTIVE CONTROL & ADMIN CENTER</h1>
+          <p class="subtitle">Multi-Task Parallel Orchestrator & Smart Token Saver Management</p>
+        </div>
+      </div>
+      
+      <!-- Top Navigation Tabs -->
+      <div class="nav-switch-container">
+        <button id="btnTabDashboard" class="nav-tab-btn active">
+          <span>📊 모니터링 대시보드</span>
+        </button>
+        <button id="btnTabAdmin" class="nav-tab-btn glow-cyan">
+          <span>⚙️ 관리자 통합 센터</span>
+        </button>
+      </div>
+
+      <div class="header-actions">
+        <button id="btnPipelineRun" class="btn btn-primary glow-cyan">
+          <span>⚡ 파이프라인 연계 실행</span>
+        </button>
+        <button id="btnParallelRun" class="btn btn-secondary glow-purple">
+          <span>🚀 전체 병렬 동시 실행</span>
+        </button>
+        <button id="btnAddAgent" class="btn btn-accent">
+          <span>➕ 신규 에이전트 추가</span>
+        </button>
+        <button id="btnReset" class="btn btn-outline-danger">
+          <span>🔄 초기화</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 1. Main Dashboard View -->
+    <div id="dashboardView">
+      <!-- Real-time Token & System Metrics Banner -->
+      <section class="metrics-grid">
+        <div class="metric-card glass">
+          <div class="metric-icon blue">📡</div>
+          <div class="metric-content">
+            <span class="metric-label">가동 중 에이전트</span>
+            <div class="metric-value"><span id="statActiveCount">0</span> <span class="metric-unit">/ <span id="statTotalCount">6</span></span></div>
+          </div>
+        </div>
+
+        <div class="metric-card glass">
+          <div class="metric-icon green">🎯</div>
+          <div class="metric-content">
+            <span class="metric-label">작업 성공률</span>
+            <div class="metric-value"><span id="statSuccessRate">0</span><span class="metric-unit">%</span></div>
+          </div>
+        </div>
+
+        <div class="metric-card glass">
+          <div class="metric-icon purple">⚡</div>
+          <div class="metric-content">
+            <span class="metric-label">사용된 총 토큰</span>
+            <div class="metric-value"><span id="statTotalTokens">0</span> <span class="metric-unit">Tokens</span></div>
+          </div>
+        </div>
+
+        <div class="metric-card glass glow-green">
+          <div class="metric-icon emerald">💡</div>
+          <div class="metric-content">
+            <span class="metric-label">스마트 절감된 토큰</span>
+            <div class="metric-value"><span id="statSavedTokens">0</span> <span class="metric-unit">(<span id="statSavingsRatio">0</span>%)</span></div>
+          </div>
+        </div>
+
+        <div class="metric-card glass">
+          <div class="metric-icon gold">💲</div>
+          <div class="metric-content">
+            <span class="metric-label">추정 API 비용 (GPT/Gemini/Claude)</span>
+            <div class="metric-value"><span id="statEstimatedCost">$0.0000</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pipeline Flow Visualizer Banner -->
+      <section class="pipeline-visualizer glass">
+        <div class="pipeline-header">
+          <h2>🔗 WORKFLOW PIPELINE FLOW</h2>
+          <span class="badge badge-info">의존성 연계 시퀀스</span>
+        </div>
+        <div id="pipelineNodes" class="pipeline-nodes">
+          <!-- JS로 동적 생성 -->
+        </div>
+      </section>
+
+      <!-- Agent Cards Grid (4~6 Tasks) -->
+      <main class="grid-container">
+        <div id="agentGrid" class="agent-grid">
+          <!-- JS로 에이전트 카드 생성 -->
+        </div>
+      </main>
+    </div>
+
+    <!-- 2. Admin Management View (Hidden by default) -->
+    <div id="adminView" class="hidden">
+      <div class="admin-panel-container glass">
+        <!-- Sub Tabs -->
+        <div class="admin-sub-tabs">
+          <button class="sub-tab-btn active" data-target="adminSubAgents">📋 에이전트 & 파이프라인 제어</button>
+          <button class="sub-tab-btn" data-target="adminSubToken">💡 토큰 절감 & LLM 단가 설정</button>
+          <button class="sub-tab-btn" data-target="adminSubSecurity">🔒 보안 및 NAS Proxy 네트워크</button>
+          <button class="sub-tab-btn" data-target="adminSubHistory">📜 실행 이력 및 아카이브</button>
+        </div>
+
+        <div class="admin-sub-content">
+          <!-- Sub Tab 1: Agents & Pipeline Management -->
+          <div id="adminSubAgents" class="admin-sub-panel active">
+            <div class="admin-section-header">
+              <div>
+                <h3>📋 등록된 에이전트 및 파이프라인 의존성 관리</h3>
+                <p class="section-desc">에이전트의 실행 커맨드, 바인딩 LLM 모델 및 순차 실행 파이프라인 체인을 일괄 수정/제어합니다.</p>
+              </div>
+              <button class="btn btn-accent btn-sm" id="btnAdminAddAgent">➕ 신규 에이전트 추가</button>
+            </div>
+            
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>에이전트명</th>
+                    <th>카테고리</th>
+                    <th>실행 커맨드</th>
+                    <th>바인딩 모델</th>
+                    <th>다음 연계 작업 (Next)</th>
+                    <th>상태</th>
+                    <th>관리 작업</th>
+                  </tr>
+                </thead>
+                <tbody id="adminAgentTableBody">
+                  <!-- JS 동적 생성 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub Tab 2: Token Saver & LLM Pricing -->
+          <div id="adminSubToken" class="admin-sub-panel">
+            <div class="admin-section-header">
+              <div>
+                <h3>💡 스마트 토큰 절감기 & LLM Provider 단가 설정</h3>
+                <p class="section-desc">컨텍스트 압축 강도를 조정하고 OpenAI, Google Gemini, Anthropic Claude의 1M 토큰당 가격(USD) 단가표를 관리합니다.</p>
+              </div>
+              <button class="btn btn-primary glow-cyan btn-sm" id="btnSaveTokenSettings">💾 설정 저장하기</button>
+            </div>
+
+            <div class="admin-form-grid">
+              <div class="admin-card glass">
+                <h4>⚡ 컨텍스트 압축 및 캐싱 모드</h4>
+                <div class="form-group margin-top">
+                  <label>압축 강도 (Context Compression Level)</label>
+                  <select id="settingCompressionLevel" class="form-control">
+                    <option value="conservative">보수적 (기본 공백 및 태스크 정리 / 최소 변경)</option>
+                    <option value="standard" selected>표준 (HTML/태그 제거 및 연속 공백 통합 - 권장)</option>
+                    <option value="aggressive">공격적 (중복 키워드/특수문자 제거 및 최대 압축)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="admin-card glass full-width">
+                <h4>💲 3대 LLM Provider 1M 토큰당 단가표 (USD)</h4>
+                <p class="card-desc">추정 비용 산정에 사용되는 1M(1,000,000) Input/Output 토큰당 가격입니다.</p>
+                <div class="pricing-grid margin-top">
+                  <!-- Gemini -->
+                  <div class="price-box">
+                    <span class="provider-badge gemini">Google Gemini 1.5 Flash</span>
+                    <div class="price-inputs">
+                      <div><label>Input ($/1M):</label><input type="number" step="0.001" id="price_gemini-1.5-flash_input" value="0.075"></div>
+                      <div><label>Output ($/1M):</label><input type="number" step="0.001" id="price_gemini-1.5-flash_output" value="0.30"></div>
+                    </div>
+                  </div>
+                  <div class="price-box">
+                    <span class="provider-badge gemini">Google Gemini 1.5 Pro</span>
+                    <div class="price-inputs">
+                      <div><label>Input ($/1M):</label><input type="number" step="0.001" id="price_gemini-1.5-pro_input" value="1.25"></div>
+                      <div><label>Output ($/1M):</label><input type="number" step="0.001" id="price_gemini-1.5-pro_output" value="5.00"></div>
+                    </div>
+                  </div>
+
+                  <!-- OpenAI -->
+                  <div class="price-box">
+                    <span class="provider-badge openai">OpenAI GPT-4o Mini</span>
+                    <div class="price-inputs">
+                      <div><label>Input ($/1M):</label><input type="number" step="0.001" id="price_gpt-4o-mini_input" value="0.15"></div>
+                      <div><label>Output ($/1M):</label><input type="number" step="0.001" id="price_gpt-4o-mini_output" value="0.60"></div>
+                    </div>
+                  </div>
+                  <div class="price-box">
+                    <span class="provider-badge openai">OpenAI GPT-4o</span>
+                    <div class="price-inputs">
+                      <div><label>Input ($/1M):</label><input type="number" step="0.001" id="price_gpt-4o_input" value="2.50"></div>
+                      <div><label>Output ($/1M):</label><input type="number" step="0.001" id="price_gpt-4o_output" value="10.00"></div>
+                    </div>
+                  </div>
+
+                  <!-- Claude -->
+                  <div class="price-box">
+                    <span class="provider-badge claude">Claude 3 Haiku</span>
+                    <div class="price-inputs">
+                      <div><label>Input ($/1M):</label><input type="number" step="0.001" id="price_claude-3-haiku_input" value="0.25"></div>
+                      <div><label>Output ($/1M):</label><input type="number" step="0.001" id="price_claude-3-haiku_output" value="1.25"></div>
+                    </div>
+                  </div>
+                  <div class="price-box">
+                    <span class="provider-badge claude">Claude 3.5 Sonnet</span>
+                    <div class="price-inputs">
+                      <div><label>Input ($/1M):</label><input type="number" step="0.001" id="price_claude-3-5-sonnet_input" value="3.00"></div>
+                      <div><label>Output ($/1M):</label><input type="number" step="0.001" id="price_claude-3-5-sonnet_output" value="15.00"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub Tab 3: Security & NAS Proxy Network -->
+          <div id="adminSubSecurity" class="admin-sub-panel">
+            <div class="admin-section-header">
+              <div>
+                <h3>🔒 대시보드 보안 인증 및 Reverse Proxy 네트워크 점검</h3>
+                <p class="section-desc">관리자 비밀번호를 안전하게 변경하고 NAS 및 Nginx 프록시 SSE 실시간 스트리밍 핑 상태를 점검합니다.</p>
+              </div>
+            </div>
+
+            <div class="admin-form-grid">
+              <!-- Credentials Change Card -->
+              <div class="admin-card glass">
+                <h4>🔑 관리자 계정 ID & 비밀번호 변경</h4>
+                <div class="form-group margin-top">
+                  <label>관리자 계정 ID (Username)</label>
+                  <input type="text" id="inputNewUsername" class="form-control" placeholder="계정 ID 입력 (기본: admin)">
+                </div>
+                <div class="form-group margin-top">
+                  <label>새 비밀번호 입력</label>
+                  <input type="password" id="inputNewPassword" class="form-control" placeholder="최소 4자 이상 입력">
+                </div>
+                <div class="form-group margin-top">
+                  <label>새 비밀번호 확인</label>
+                  <input type="password" id="inputNewPasswordConfirm" class="form-control" placeholder="비밀번호 다시 입력">
+                </div>
+                <button class="btn btn-accent margin-top" id="btnChangePassword">🔑 계정 정보 변경하기</button>
+                <div id="pwdChangeMsg" class="message-box hidden margin-top"></div>
+              </div>
+
+              <!-- Proxy Ping & Status Card -->
+              <div class="admin-card glass">
+                <h4>📡 Reverse Proxy & SSE 연결 상태 점검</h4>
+                <p class="card-desc">Nginx/Synology NAS 역방향 프록시 스트리밍 지연 해제 헤더(`X-Accel-Buffering: no`) 상태를 확인합니다.</p>
+                
+                <button class="btn btn-secondary glow-purple margin-top" id="btnTestProxyPing">🔄 프록시 핑 상태 점검</button>
+                
+                <div id="proxyPingResult" class="ping-status-box margin-top">
+                  <div class="ping-item"><span>SSE 클라이언트 수:</span> <strong id="pingSseCount">-</strong></div>
+                  <div class="ping-item"><span>프록시 버퍼링 설정:</span> <strong id="pingBuffering" class="text-green">X-Accel-Buffering: no (적용됨)</strong></div>
+                  <div class="ping-item"><span>최종 점검 시간:</span> <span id="pingTime">-</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub Tab 4: Execution History & Logs -->
+          <div id="adminSubHistory" class="admin-sub-panel">
+            <div class="admin-section-header">
+              <div>
+                <h3>📜 에이전트 작업 실행 이력 아카이브</h3>
+                <p class="section-desc">에이전트별 과거 작업 수행 결과, 사용/절감된 토큰 수 및 소요 시간을 타임라인으로 조회합니다.</p>
+              </div>
+              <div>
+                <button class="btn btn-outline btn-sm" id="btnRefreshHistory">🔄 새로고침</button>
+                <button class="btn btn-outline-danger btn-sm" id="btnClearHistory">🗑️ 이력 초기화</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>실행 일시</th>
+                    <th>태스크 ID</th>
+                    <th>에이전트 명칭</th>
+                    <th>상태</th>
+                    <th>바인딩 모델</th>
+                    <th>소요 시간</th>
+                    <th>사용 토큰</th>
+                    <th>절감 토큰</th>
+                    <th>추정 비용</th>
+                    <th>요약</th>
+                  </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                  <!-- JS 동적 생성 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log Terminal Modal -->
+    <div id="logModal" class="modal-backdrop hidden">
+      <div class="modal-box glass terminal-modal">
+        <div class="modal-header">
+          <h3 id="modalAgentTitle">📜 Agent Console Terminal Log</h3>
+          <button class="btn-close" id="btnCloseLogModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <pre id="modalLogContent" class="terminal-body"></pre>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnClearModalLog">로그 지우기</button>
+          <button class="btn btn-outline" id="btnCloseModalFooter">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add/Edit Agent Modal -->
+    <div id="agentModal" class="modal-backdrop hidden">
+      <div class="modal-box glass edit-modal">
+        <div class="modal-header">
+          <h3 id="agentModalTitle">➕ 에이전트 등록 / 수정</h3>
+          <button class="btn-close" id="btnCloseAgentModal">&times;</button>
+        </div>
+        <form id="agentForm" class="modal-body form-grid">
+          <input type="hidden" id="formAgentId">
+          <div class="form-group">
+            <label>에이전트 명칭</label>
+            <input type="text" id="formName" required placeholder="예: 데이터 분석 에이전트">
+          </div>
+          <div class="form-group">
+            <label>카테고리</label>
+            <input type="text" id="formCategory" placeholder="예: AI 분석, 수집, 시스템">
+          </div>
+          <div class="form-group full-width">
+            <label>상세 설명</label>
+            <input type="text" id="formDescription" placeholder="작업이 수행하는 일 설명">
+          </div>
+          <div class="form-group">
+            <label>실행 커맨드 (Executable)</label>
+            <input type="text" id="formCommand" required placeholder="node 또는 python">
+          </div>
+          <div class="form-group">
+            <label>인자 (Arguments JSON Array)</label>
+            <input type="text" id="formArgs" placeholder='["script.py", "--arg1"]'>
+          </div>
+          <div class="form-group">
+            <label>다음 연계 작업 ID (Next Task)</label>
+            <input type="text" id="formNextTaskId" placeholder="예: agent_2 (없으면 빈칸)">
+          </div>
+          <div class="form-group">
+            <label>바인딩 LLM 모델 (3대 Provider 지원)</label>
+            <select id="formModel">
+              <optgroup label="Google Gemini">
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (초경량/저비용)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (고성능/긴 문맥)</option>
+              </optgroup>
+              <optgroup label="OpenAI">
+                <option value="gpt-4o-mini">GPT-4o Mini (경량/빠름)</option>
+                <option value="gpt-4o">GPT-4o (고난도 추론)</option>
+              </optgroup>
+              <optgroup label="Anthropic Claude">
+                <option value="claude-3-haiku">Claude 3 Haiku (빠른 응답)</option>
+                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (최고성능 코딩/분석)</option>
+              </optgroup>
+              <optgroup label="기타">
+                <option value="none">None (로컬 전용 스크립트)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="modal-footer full-width">
+            <button type="button" class="btn btn-secondary" id="btnCancelAgentModal">취소</button>
+            <button type="submit" class="btn btn-accent">저장하기</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

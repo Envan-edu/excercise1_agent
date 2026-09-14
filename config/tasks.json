@@ -1,0 +1,128 @@
+[
+  {
+    "id": "agent_1",
+    "name": "데이터 수집 에이전트",
+    "category": "수집 & 스크래핑",
+    "description": "지정된 웹사이트 및 뉴스 Feed에서 최신 아티클과 텍스트를 실시간 수집합니다.",
+    "command": "node",
+    "args": [
+      "-e",
+      "console.log('🌐 [Agent 1] Target URL 스크래핑 시작...'); setTimeout(() => console.log('📄 [Agent 1] HTML 데이터 45KB 수집 완료.'), 1500); setTimeout(() => console.log('RESULT_JSON:{\"rawText\":\"최신 AI 에이전트 트렌드 및 NAS 구축에 관한 텍스트 데이터...\", \"count\": 12}'), 3000);"
+    ],
+    "params": {
+      "targetUrl": "https://news.example.com",
+      "maxDepth": "2"
+    },
+    "dependsOn": [],
+    "nextTaskId": "agent_2",
+    "model": "gemini-1.5-flash",
+    "tokenQuota": 5000,
+    "status": "FAILED"
+  },
+  {
+    "id": "agent_2",
+    "name": "AI 데이터 정제 & 요약",
+    "category": "AI 분석",
+    "description": "Agent 1이 전달한 raw 텍스트를 로컬 사전 정제 후 핵심 요약과 키워드를 추출합니다.",
+    "command": "node",
+    "args": [
+      "-e",
+      "console.log('⚡ [Agent 2] 이전 파이프라인 데이터(Agent 1) 수신 완료.'); setTimeout(() => console.log('🔍 [Agent 2] 불필요 HTML 태그 및 공백 정제 (토큰 65% 절감 적용)'), 1500); setTimeout(() => console.log('RESULT_JSON:{\"summary\":\"NAS 기반 개인 에이전트 관제 시스템 구축 요약\", \"keywords\":[\"Docker\", \"NAS\", \"Token Optimization\"]}'), 3500);"
+    ],
+    "params": {
+      "promptStyle": "Concise Bullet Points",
+      "compressionRatio": "High"
+    },
+    "dependsOn": [
+      "agent_1"
+    ],
+    "nextTaskId": "agent_3",
+    "model": "gemini-1.5-flash",
+    "tokenQuota": 8000,
+    "status": "IDLE"
+  },
+  {
+    "id": "agent_3",
+    "name": "보고서 자동 생성",
+    "category": "문서 작업",
+    "description": "정제된 AI 분석 결과를 바탕으로 마크다운 보고서 및 요약본을 NAS 저장소에 생성합니다.",
+    "command": "node",
+    "args": [
+      "-e",
+      "console.log('📝 [Agent 3] 요약 데이터를 바탕으로 마크다운 리포트 작성 중...'); setTimeout(() => console.log('💾 [Agent 3] NAS Volume (/app/data/report_2026.md) 파일 저장 성공'), 2000); setTimeout(() => console.log('RESULT_JSON:{\"reportPath\":\"/app/data/report_2026.md\", \"pages\": 3}'), 4000);"
+    ],
+    "params": {
+      "outputFormat": "Markdown",
+      "savePath": "/app/data"
+    },
+    "dependsOn": [
+      "agent_2"
+    ],
+    "nextTaskId": "agent_4",
+    "model": "gpt-4o-mini",
+    "tokenQuota": 6000,
+    "status": "IDLE"
+  },
+  {
+    "id": "agent_4",
+    "name": "알림 & 메세지 발송",
+    "category": "알림 배포",
+    "description": "생성된 보고서 결과와 작업 상태를 Telegram / Discord / Webhook으로 자동 배포합니다.",
+    "command": "node",
+    "args": [
+      "-e",
+      "console.log('📢 [Agent 4] 파이프라인 완결 알림 준비 중...'); setTimeout(() => console.log('✅ [Agent 4] Telegram Webhook 발송 완료! 파이프라인 1~4 완료.'), 1500);"
+    ],
+    "params": {
+      "channel": "Telegram",
+      "notifyOnSuccess": "true"
+    },
+    "dependsOn": [
+      "agent_3"
+    ],
+    "nextTaskId": null,
+    "model": "none",
+    "tokenQuota": 1000,
+    "status": "IDLE"
+  },
+  {
+    "id": "agent_5",
+    "name": "NAS 서버 헬스 체크",
+    "category": "시스템 관제",
+    "description": "NAS 서버의 CPU, RAM, 저장공간 및 Docker 컨테이너 헬스를 주기적으로 모니터링합니다.",
+    "command": "node",
+    "args": [
+      "-e",
+      "console.log('🖥️ [Agent 5] NAS 시스템 리소스 점검 중...'); setTimeout(() => console.log('📊 [Agent 5] CPU: 12%, Memory: 3.2GB / 16GB, Disk Free: 1.2TB (정상)'), 2000);"
+    ],
+    "params": {
+      "checkInterval": "60s",
+      "cpuThreshold": "85%"
+    },
+    "dependsOn": [],
+    "nextTaskId": null,
+    "model": "none",
+    "tokenQuota": 500,
+    "status": "FAILED"
+  },
+  {
+    "id": "agent_6",
+    "name": "코드 검증 및 리팩토링",
+    "category": "개발 보조",
+    "description": "등록된 사용자 스크립트 코드의 문법 오류 및 보안 취약점을 사전 검증합니다.",
+    "command": "node",
+    "args": [
+      "-e",
+      "console.log('🛡️ [Agent 6] 사용자 파이썬/Node 스크립트 정적 분석 중...'); setTimeout(() => console.log('✅ [Agent 6] Command Injection 취약점 없음. 문법 검증 완료.'), 2500);"
+    ],
+    "params": {
+      "targetFile": "helpers/token_saver.py",
+      "strictMode": "true"
+    },
+    "dependsOn": [],
+    "nextTaskId": null,
+    "model": "gemini-1.5-flash",
+    "tokenQuota": 10000,
+    "status": "FAILED"
+  }
+]
